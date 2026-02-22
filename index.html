@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard ITIL 4 - TecnoMarket SAC | Control Room 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success: #27ae60; --warning: #f39c12; --danger: #e74c3c;
+            --dark: #2c3e50; --light: #ecf0f1; --white: rgba(255,255,255,0.92);
+            --gradient-gold: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+            --glass-bg: rgba(255,255,255,0.88);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%; animation: gradientShift 15s ease infinite;
+            min-height: 100vh; color: var(--dark); overflow-x: hidden; line-height: 1.6;
+        }
+        @keyframes gradientShift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+        .particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        .particle { position: absolute; width: 4px; height: 4px; background: rgba(255,255,255,0.6); border-radius: 50%; animation: float 6s infinite linear; }
+        @keyframes float { 0%{transform:translateY(100vh) rotate(0deg);opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{transform:translateY(-100px) rotate(360deg);opacity:0} }
+        .container { max-width: 1600px; margin: 0 auto; padding: 20px; position: relative; z-index: 2; }
+        
+        /* HEADER */
+        header { 
+            background: var(--glass-bg); backdrop-filter: blur(30px); border-radius: 30px; 
+            margin-bottom: 30px; box-shadow: 0 35px 70px rgba(0,0,0,0.25); 
+            border: 1px solid rgba(255,255,255,0.3); overflow: hidden;
+        }
+        header::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 6px; background: var(--gradient-gold); box-shadow: 0 2px 10px rgba(240,147,251,0.4); }
+        .header-content { padding: 40px 30px; }
+        .logo { font-size: 3em; font-weight: 900; background: var(--primary); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 15px; text-align: center; }
+        .header-title { font-size: 2em; color: var(--dark); margin-bottom: 25px; text-align: center; }
+        .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
+        .status-card { background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7)); padding: 25px 20px; border-radius: 20px; text-align: center; transition: all 0.4s; border: 1px solid rgba(255,255,255,0.4); position: relative; overflow: hidden; }
+        .status-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--success), var(--warning), var(--primary)); }
+        .status-card:hover { transform: translateY(-8px); box-shadow: 0 25px 50px rgba(0,0,0,0.2); }
+        .status-icon { font-size: 2.2em; margin-bottom: 12px; }
+        .status-metric { font-size: 2.5em; font-weight: 900; line-height: 1; margin: 8px 0; }
+        .status-good { color: var(--success); }
+        .status-label { font-size: 0.85em; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; }
+        
+        /* NAVEGACIÓN */
+        .nav-tabs { display: flex; justify-content: center; gap: 12px; margin-bottom: 25px; background: var(--glass-bg); padding: 20px 25px; border-radius: 25px; box-shadow: 0 20px 45px rgba(0,0,0,0.2); backdrop-filter: blur(15px); flex-wrap: wrap; }
+        .tab { padding: 15px 28px; background: transparent; border: 2px solid transparent; border-radius: 50px; cursor: pointer; font-weight: 600; font-size: 0.95em; transition: all 0.4s; position: relative; overflow: hidden; }
+        .tab::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: var(--primary); z-index: -1; transition: left 0.4s; }
+        .tab.active, .tab:hover { color: white; border-color: rgba(255,255,255,0.3); transform: translateY(-3px); }
+        .tab.active::before, .tab:hover::before { left: 0; }
+        .tab i { margin-right: 8px; }
+        
+        /* CONTENT - MENOS BLANCO, MÁS CONTENIDO */
+        .tab-content { display: none; background: var(--glass-bg); padding: 30px; border-radius: 25px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.25); min-height: 900px; margin-bottom: 30px; }
+        .tab-content.active { display: block; animation: slideInUp 0.6s; }
+        @keyframes slideInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* OVERVIEW */
+        .overview-hero { background: linear-gradient(135deg, rgba(52,152,219,0.15), rgba(102,126,234,0.15)); padding: 30px; border-radius: 20px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(52,152,219,0.3); }
+        .overview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-bottom: 25px; }
+        .metric-card { background: linear-gradient(145deg, rgba(255,255,255,0.92), rgba(255,255,255,0.82)); padding: 30px 25px; border-radius: 20px; transition: all 0.5s; border: 1px solid rgba(255,255,255,0.4); position: relative; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+        .metric-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px; background: var(--gradient-gold); }
+        .metric-card:hover { transform: translateY(-10px) scale(1.02); box-shadow: 0 30px 60px rgba(0,0,0,0.25); }
+        .metric-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .metric-icon { font-size: 2.2em; padding: 12px; background: var(--primary); color: white; border-radius: 18px; box-shadow: 0 8px 20px rgba(102,126,234,0.4); }
+        .metric-title { font-size: 1.25em; font-weight: 700; color: var(--dark); }
+        .metric-value { font-size: 3.5em; font-weight: 900; line-height: 1; margin: 15px 0; }
+        .metric-good { color: var(--success); } .metric-warning { color: var(--warning); }
+        .metric-subtitle { color: #7f8c8d; font-size: 1em; margin-bottom: 15px; }
+        .sparkline { height: 60px; margin: 20px 0; width: 100% !important; }
+        
+        /* PRÁCTICAS ITIL - TEXTO FIJO */
+        .section-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 25px; }
+        .practice-card { background: linear-gradient(145deg, rgba(255,255,255,0.92), rgba(255,255,255,0.82)); padding: 30px 25px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); transition: all 0.4s; border: 1px solid rgba(255,255,255,0.3); position: relative; overflow: hidden; margin-bottom: 20px; }
+        .practice-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--primary); }
+        .practice-card h3 { 
+            font-size: 1.35em !important; font-weight: 800; color: var(--dark); 
+            margin: 0 0 20px 0 !important; padding-bottom: 12px; position: relative;
+            line-height: 1.25 !important; display: block; width: 100%; 
+            word-break: break-word; overflow-wrap: break-word; hyphens: auto;
+        }
+        .practice-card h3 i { margin-right: 10px; }
+        .practice-card:hover { transform: translateY(-8px) scale(1.01); box-shadow: 0 25px 50px rgba(0,0,0,0.25); }
+        .metric-inline { font-size: 1.4em; font-weight: 800; padding: 8px 16px; background: rgba(39,174,96,0.1); border-radius: 20px; margin: 15px 5px 15px 0; display: inline-block; white-space: nowrap; }
+        .metric-inline.warning { background: rgba(243,156,18,0.1); color: var(--warning); }
+        .metric-good.inline { background: rgba(39,174,96,0.1); color: var(--success); }
+        ul { margin: 15px 0; padding-left: 25px; }
+        ul li { margin-bottom: 8px; font-size: 0.98em; color: #555; }
+        ul li i { margin-right: 8px; width: 16px; }
+        
+        /* PRINCIPIOS */
+        .principle-card p { font-size: 1.05em; line-height: 1.7; color: #444; margin-top: 15px; }
+        
+        /* TIMELINE */
+        .timeline-container { max-width: 1100px; margin: 0 auto; }
+        .timeline { position: relative; padding: 30px 0; }
+        .timeline::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 5px; background: linear-gradient(to bottom, var(--primary)); transform: translateX(-50%); box-shadow: 0 0 10px rgba(102,126,234,0.4); }
+        .timeline-item { position: relative; margin: 50px 0; opacity: 0; transform: translateX(-40px); transition: all 0.7s; padding: 20px; }
+        .timeline-item.visible { opacity: 1; transform: translateX(0); }
+        .timeline-item:nth-child(even) { transform: translateX(40px); }
+        .timeline-item:nth-child(even).visible { transform: translateX(0); }
+        .timeline-dot { width: 20px; height: 20px; background: white; border: 4px solid var(--primary); border-radius: 50%; position: absolute; left: 50%; top: 15px; transform: translateX(-50%); z-index: 2; box-shadow: 0 0 0 4px rgba(255,255,255,0.8); }
+        .timeline-item.complete .timeline-dot { background: var(--success); border-color: var(--success); animation: pulse 2s infinite; }
+        @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(39,174,96,0.7);} 70%{box-shadow:0 0 0 10px rgba(39,174,96,0);} 100%{box-shadow:0 0 0 0 rgba(39,174,96,0);} }
+        .timeline-content { background: linear-gradient(145deg, rgba(255,255,255,0.92), rgba(255,255,255,0.82)); padding: 25px; border-radius: 15px; max-width: 380px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.3); margin-top: 25px; }
+        .timeline-item:nth-child(odd) .timeline-content { margin-left: 50px; }
+        .timeline-item:nth-child(even) .timeline-content { margin-right: 50px; margin-left: auto; }
+        .timeline-content h4 { color: var(--dark); margin-bottom: 12px; font-size: 1.2em; }
+        
+        /* SLIDER */
+        .slider-container { text-align: center; margin: 25px 0; background: rgba(255,255,255,0.15); padding: 25px; border-radius: 20px; }
+        .slider-container label { font-size: 1.3em; font-weight: 700; color: var(--dark); display: block; margin-bottom: 15px; }
+        #progressSlider { width: 450px; height: 10px; border-radius: 5px; background: #ddd; outline: none; -webkit-appearance: none; }
+        #progressSlider::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: var(--primary); cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        
+        /* TOGGLE */
+        .toggle-switch { position: relative; display: inline-block; width: 60px; height: 32px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider-switch { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: 0.4s; border-radius: 32px; }
+        .slider-switch:before { position: absolute; content: ""; height: 24px; width: 24px; left: 4px; bottom: 4px; background-color: white; transition: 0.4s; border-radius: 50%; }
+        input:checked + .slider-switch { background: var(--success); }
+        input:checked + .slider-switch:before { transform: translateX(28px); }
+        
+        /* MODAL */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); }
+        .modal-content { background: var(--glass-bg); margin: 8% auto; padding: 35px; border-radius: 20px; width: 90%; max-width: 850px; max-height: 85vh; overflow-y: auto; animation: modalSlide 0.4s; box-shadow: 0 40px 80px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); }
+        @keyframes modalSlide { from { opacity: 0; transform: scale(0.9) translateY(-40px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .close { color: #aaa; float: right; font-size: 30px; font-weight: bold; cursor: pointer; margin-top: -15px; }
+        .close:hover { color: var(--dark); }
+        .modal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 25px; }
+        .modal-item { padding: 20px; background: rgba(52,152,219,0.1); border-radius: 15px; border-left: 4px solid var(--primary); }
+        
+        /* RESPONSIVE */
+        @media (max-width: 768px) { 
+            .container { padding: 15px; }
+            .section-grid, .overview-grid { grid-template-columns: 1fr; }
+            .status-grid { grid-template-columns: repeat(2, 1fr); }
+            .timeline::before { left: 25px; }
+            .timeline-item { margin-left: 50px; }
+            .timeline-content { margin-left: 0 !important; margin-right: 0 !important; max-width: none; }
+            .metric-value { font-size: 2.8em !important; }
+            .practice-card h3 { font-size: 1.2em !important; }
+            .tab-content { padding: 20px; min-height: 700px; margin-bottom: 20px; }
+            #progressSlider { width: 300px; }
+            .nav-tabs { gap: 8px; padding: 15px; }
+            .tab { padding: 12px 20px; font-size: 0.9em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    
+    <div class="container">
+        <!-- HEADER -->
+        <header>
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-server"></i> ITIL 4 Control Room
+                </div>
+                <h1 class="header-title">TecnoMarket SAC - Transformación Digital 2026</h1>
+                <div class="status-grid">
+                    <div class="status-card">
+                        <div class="status-icon"><i class="fas fa-users status-good"></i></div>
+                        <div class="status-metric status-good">92%</div>
+                        <div class="status-label">Satisfacción Cliente</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-icon"><i class="fas fa-shield-alt status-good"></i></div>
+                        <div class="status-metric status-good">99.4%</div>
+                        <div class="status-label">Uptime Plataforma</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-icon"><i class="fas fa-bolt status-good"></i></div>
+                        <div class="status-metric status-good">2.1h</div>
+                        <div class="status-label">MTTR Promedio</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-icon"><i class="fas fa-check-circle status-good"></i></div>
+                        <div class="status-metric status-good">78%</div>
+                        <div class="status-label">FCR Incidentes</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- NAVEGACIÓN -->
+        <div class="nav-tabs">
+            <button class="tab active" onclick="showTab('overview')">
+                <i class="fas fa-chart-pie"></i> Overview
+            </button>
+            <button class="tab" onclick="showTab('practices')">
+                <i class="fas fa-cogs"></i> Prácticas ITIL
+            </button>
+            <button class="tab" onclick="showTab('principles')">
+                <i class="fas fa-balance-scale"></i> Principios
+            </button>
+            <button class="tab" onclick="showTab('timeline')">
+                <i class="fas fa-road"></i> Roadmap
+            </button>
+            <button class="tab" onclick="openModal()">
+                <i class="fas fa-info-circle"></i> Detalles
+            </button>
+        </div>
+
+        <!-- OVERVIEW -->
+        <div id="overview" class="tab-content active">
+            <div class="overview-hero">
+                <h2 style="font-size: 2em; color: var(--dark); margin-bottom: 15px;">
+                    <i class="fas fa-tachometer-alt"></i> Panel Ejecutivo - Estado Actual Q1 2026
+                </h2>
+                <p style="color: #555; font-size: 1.15em; max-width: 800px; margin: 0 auto; line-height: 1.6;">
+                    Implementación ITIL 4 en fase 3/6 con 120 empleados capacitados. ROI proyectado $247K anualizado.
+                </p>
+            </div>
+            
+            <div class="overview-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon"><i class="fas fa-users"></i></div>
+                        <div class="metric-title">Satisfacción Cliente</div>
+                    </div>
+                    <div class="metric-value metric-good">92%</div>
+                    <div class="metric-subtitle">vs Industria 85% | +27% vs Baseline 2025</div>
+                    <label class="toggle-switch" style="display: block; margin: 15px auto;">
+                        <input type="checkbox" checked onchange="toggleBenchmark(this)">
+                        <span class="slider-switch"></span>
+                    </label>
+                    <small id="benchmark-text" style="color: #7f8c8d; font-weight: 600;">Comparativa Industria Activada</small>
+                    <canvas id="sparkline1" class="sparkline"></canvas>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon"><i class="fas fa-bolt"></i></div>
+                        <div class="metric-title">Tiempo Respuesta</div>
+                    </div>
+                    <div class="metric-value metric-good">2.1h</div>
+                    <div class="metric-subtitle">Meta: <2h | SLA 95% cumplimiento este mes</div>
+                    <canvas id="sparkline2" class="sparkline"></canvas>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon"><i class="fas fa-shield-alt"></i></div>
+                        <div class="metric-title">Disponibilidad</div>
+                    </div>
+                    <div class="metric-value metric-good">99.4%</div>
+                    <div class="metric-subtitle">Caídas/mes: 0.8h | 42 cambios exitosos Q1</div>
+                    <canvas id="sparkline3" class="sparkline"></canvas>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <div class="metric-icon"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="metric-title">ROI ITIL</div>
+                    </div>
+                    <div class="metric-value metric-good">$247K</div>
+                    <div class="metric-subtitle">Ahorro anual proyectado | Fase 3/6 completa</div>
+                    <canvas id="sparkline4" class="sparkline"></canvas>
+                </div>
+            </div>
+            
+            <div style="background: rgba(255,255,255,0.15); padding: 30px; border-radius: 20px; margin-top: 20px; border: 1px solid rgba(255,255,255,0.2);">
+                <canvas id="mainChart" width="1200" height="350"></canvas>
+            </div>
+        </div>
+
+        <!-- PRÁCTICAS ITIL - TEXTO CORREGIDO -->
+        <div id="practices" class="tab-content">
+            <div class="section-grid">
+                <div class="practice-card">
+                    <h3><i class="fas fa-exclamation-triangle"></i> Gestión de Incidentes</h3>
+                    <div style="display: flex; gap: 15px; margin: 15px 0; flex-wrap: wrap;">
+                        <span class="metric-inline metric-good">FCR: 78%</span>
+                        <span class="metric-inline metric-good">SLA: 95%</span>
+                    </div>
+                    <ul>
+                        <li><i class="fas fa-check-circle metric-good"></i> Mesa ayuda 24/7 operativa con 12 agentes</li>
+                        <li><i class="fas fa-check-circle metric-good"></i> Portal self-service (65% adopción usuarios)</li>
+                        <li><i class="fas fa-check-circle metric-good"></i> IA categorización automática 92% precisión</li>
+                        <li><i class="fas fa-check-circle metric-good"></i> Escalado inteligente L1→L2 en 8 minutos</li>
+                    </ul>
+                </div>
+                
+                <div class="practice-card">
+                    <h3><i class="fas fa-bug"></i> Gestión de Problemas</h3>
+                    <div style="display: flex; gap: 15px; margin: 15px 0; flex-wrap: wrap;">
+                        <span class="metric-inline warning">Resueltos: 62%</span>
+                        <span class="metric-inline metric-good">MTTR: 8 días</span>
+                    </div>
+                    <ul>
+                        <li><i class="fas fa-check-circle"></i> Análisis raíz sistemático con 5 Whys</li>
+                        <li><i class="fas fa-check-circle"></i> Base conocimiento proactiva (187 artículos)</li>
+                        <li><i class="fas fa-check-circle"></i> Trend analysis predictivo con ML</li>
+                        <li><i class="fas fa-check-circle"></i> 15 workarounds documentados y validados</li>
+                    </ul>
+                </div>
+                
+                <div class="practice-card">
+                    <h3><i class="fas fa-exchange-alt"></i> Control de Cambios</h3>
+                    <div style="display: flex; gap: 15px; margin: 15px 0; flex-wrap: wrap;">
+                        <span class="metric-inline metric-good">Éxito: 97%</span>
+                        <span class="metric-inline metric-good">CAB: 98%</span>
+                    </div>
+                    <ul>
+                        <li><i class="fas fa-check-circle"></i> Pipeline GitOps automatizado (Jenkins)</li>
+                        <li><i class="fas fa-check-circle"></i> Rollback procedures 100% documentados</li>
+                        <li><i class="fas fa-check-circle"></i> Risk scoring implementado (1-5 escala)</li>
+                        <li><i class="fas fa-check-circle"></i> 42 cambios auditados Q1 2026</li>
+                    </ul>
+                </div>
+                
+                <div class="practice-card">
+                    <h3><i class="fas fa-handshake"></i> Niveles de Servicio</h3>
+                    <div style="display: flex; gap: 15px; margin: 15px 0; flex-wrap: wrap;">
+                        <span class="metric-inline metric-good">Cumplimiento: 96%</span>
+                        <span class="metric-inline metric-good">CSAT: 4.6/5</span>
+                    </div>
+                    <ul>
+                        <li><i class="fas fa-check-circle"></i> 5 SLAs firmados con clientes clave</li>
+                        <li><i class="fas fa-check-circle"></i> Reportes ServiceNow mensuales automáticos</li>
+                        <li><i class="fas fa-check-circle"></i> Revisión trimestral con ejecutivo</li>
+                        <li><i class="fas fa-check-circle"></i> Mejora continua PDCA implementada</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- PRINCIPIOS -->
+        <div id="principles" class="tab-content">
+            <div class="section-grid">
+                <div class="practice-card">
+                    <h3><i class="fas fa-bullseye"></i> 🎯 Enfocarse en valor</h3>
+                    <p><strong>Acción ejecutada:</strong> KPIs realineados completamente a CSAT (92% vs 65% baseline 2025). 120 empleados capacitados directamente impactan satisfacción del cliente final.</p>
+                </div>
+                <div class="practice-card">
+                    <h3><i class="fas fa-users-cog"></i> 🤝 Colaborar y visibilidad</h3>
+                    <p><strong>Acción ejecutada:</strong> Portal ServiceNow único para todos los equipos. Reducción de tickets duplicados en 73% con dashboard compartido en tiempo real.</p>
+                </div>
+                <div class="practice-card">
+                    <h3><i class="fas fa-brain"></i> 🧠 Pensar holísticamente</h3>
+                    <p><strong>Acción ejecutada:</strong> Integración end-to-end web→inventarios→pagos. Uptime sostenido 99.4% con monitoreo unificado 24/7.</p>
+                </div>
+                <div class="practice-card">
+                    <h3><i class="fas fa-rocket"></i> 🚀 Iterativo con feedback</h3>
+                    <p><strong>Acción ejecutada:</strong> 4 sprints ITIL completados con metodología ágil. Velocidad de implementación +35% mes a mes con retrospectivas.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROADMAP -->
+        <div id="timeline" class="tab-content">
+            <div class="slider-container">
+                <label>Progreso implementación: <span id="monthProgress">3</span> de 6 meses completados</label>
+                <input type="range" id="progressSlider" min="0" max="6" value="3">
+            </div>
+            
+            <div class="timeline-container">
+                <div class="timeline">
+                    <div class="timeline-item complete">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <h4><i class="fas fa-clipboard-check"></i> Enero 2026: Diagnóstico Baseline</h4>
+                            <p>6 problemas críticos identificados. SLA inicial 68%. Equipo de 120 personas completamente mapeado.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item complete">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <h4><i class="fas fa-headset"></i> Febrero 2026: Incident Management Live</h4>
+                            <p>Mesa ayuda 24/7 operativa. FCR alcanza 78%. Portal self-service con 65% adopción usuarios.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <h4><i class="fas fa-search"></i> Marzo 2026: Problem + Change Control</h4>
+                            <p>Base conocimiento activa con 187 artículos. CAB operativo. 97% cambios exitosos auditados.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <h4><i class="fas fa-file-contract"></i> Abril 2026: SLM + Reporting</h4>
+                            <p>5 SLAs firmados clientes clave. Dashboard ejecutivo automatizado ServiceNow en producción.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <h4><i class="fas fa-robot"></i> Mayo 2026: Automatización IA</h4>
+                            <p>Predicción incidentes con ML. Chatbot resolución L1 alcanza 82% efectividad.</p>
+                        </div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content">
+                            <h4><i class="fas fa-trophy"></i> Junio 2026: ITIL 4 Certified</h4>
+                            <p>Auditoría externa completada. Nivel de madurez 4 alcanzado. ROI $247K anualizado confirmado.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALLES -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 style="color: var(--dark); margin-bottom: 25px;"><i class="fas fa-chart-bar"></i> Métricas Detalladas ITIL 4 - Febrero 2026</h2>
+            <div class="modal-grid">
+                <div class="modal-item">
+                    <strong>Incident Management:</strong><br>
+                    FCR 78% | SLA 95% | Volumen ↓42% | 1,247 tickets procesados
+                </div>
+                <div class="modal-item">
+                    <strong>Problem Management:</strong><br>
+                    Root Cause 62% | MTTR 8 días | 23 problemas resueltos | 187 KB articles
+                </div>
+                <div class="modal-item">
+                    <strong>Change Control:</strong><br>
+                    Éxito 97% | CAB 98% | 42 cambios Q1 | 0 incidentes por cambio
+                </div>
+                <div class="modal-item">
+                    <strong>Service Levels:</strong><br>
+                    Cumplimiento 96% | CSAT 4.6/5 | 5 contratos activos | 120 usuarios capacitados
+                </div>
+            </div>
+            <p style="margin-top: 30px; font-style: italic; color: #666; text-align: center; font-size: 0.95em;">
+                Dashboard desarrollado por equipo IT TecnoMarket SAC • Datos reales procesados Febrero 2026
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function createParticles() {
+            const particles = document.getElementById('particles');
+            for (let i = 0; i < 60; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                particle.style.animationDuration = (Math.random() * 3 + 4) + 's';
+                particles.appendChild(particle);
+            }
+        }
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.target.closest('.tab').classList.add('active');
+            
+            document.getElementById(tabId).scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            if (tabId === 'overview') initCharts();
+            if (tabId === 'timeline') observeTimeline();
+        }
+
+        let mainChart;
+        function initCharts() {
+            if (!mainChart) {
+                const ctxMain = document.getElementById('mainChart')?.getContext('2d');
+                if (ctxMain) {
+                    mainChart = new Chart(ctxMain, {
+                        type: 'line',
+                        data: {
+                            labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                            datasets: [{
+                                label: 'CSAT %',
+                                data: [65, 78, 85, 89, 91, 92],
+                                borderColor: '#27ae60',
+                                backgroundColor: 'rgba(39,174,96,0.15)',
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { position: 'top', labels: { font: { size: 14 } } } },
+                            scales: { y: { beginAtZero: true, max: 100 } }
+                        }
+                    });
+                }
+            }
+
+            ['sparkline1', 'sparkline2', 'sparkline3', 'sparkline4'].forEach((id, idx) => {
+                const canvas = document.getElementById(id);
+                if (canvas && !canvas.chart) {
+                    const ctx = canvas.getContext('2d');
+                    canvas.chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['-5', '-4', '-3', '-2', '-1', '0'],
+                            datasets: [{ 
+                                data: [60+idx*8, 68+idx*8, 75+idx*8, 82+idx*8, 88+idx*8, 92+idx*8], 
+                                borderColor: ['#27ae60', '#3498db', '#f39c12', '#9b59b6'][idx], 
+                                backgroundColor: ['rgba(39,174,96,0.25)', 'rgba(52,152,219,0.25)', 'rgba(243,156,18,0.25)', 'rgba(155,89,182,0.25)'][idx],
+                                tension: 0.4, fill: true
+                            }]
+                        },
+                        options: { 
+                            plugins: { legend: false }, 
+                            scales: { x: { display: false }, y: { display: false } },
+                            elements: { point: { radius: 0 } }
+                        }
+                    });
+                }
+            });
+        }
+
+        function toggleBenchmark(switchEl) {
+            document.getElementById('benchmark-text').textContent = switchEl.checked ? 
+                'Comparativa Industria Activada (85%)' : 'Comparativa Baseline Activada (65%)';
+        }
+
+        function observeTimeline() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => entry.isIntersecting && entry.target.classList.add('visible'));
+            });
+            document.querySelectorAll('.timeline-item').forEach(item => observer.observe(item));
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('progressSlider').addEventListener('input', function() {
+                document.getElementById('monthProgress').textContent = this.value;
+                document.querySelectorAll('.timeline-item').forEach((item, idx) => {
+                    if (idx < this.value) item.classList.add('complete');
+                    else item.classList.remove('complete');
+                });
+            });
+        });
+
+        function openModal() { document.getElementById('detailModal').style.display = 'block'; }
+        function closeModal() { document.getElementById('detailModal').style.display = 'none'; }
+        window.onclick = function(event) { 
+            if (event.target.classList.contains('modal')) closeModal(); 
+        }
+
+        createParticles();
+        initCharts();
+        observeTimeline();
+    </script>
+</body>
+</html>
